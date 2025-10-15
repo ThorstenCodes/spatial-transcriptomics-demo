@@ -1,1 +1,20 @@
+# R /renv
+.Rhistory
+.RData
+.Rproj.user/
+.renv/library/
+.renv/sandbox/
+.renv/python/
+.renv/cache/
+
+# Environment and secrets
+.Renviron
+
+# OS & temp
 .DS_Store
+*.Rout
+*.tmp
+
+# Data (optional, if large)
+data/
+
