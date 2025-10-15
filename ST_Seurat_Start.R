@@ -115,3 +115,33 @@ gc(full=TRUE)
 
 # Safe object as Seurat file without transcripts (more managable because smaller)
 saveRDS(object, 'data/HFC_no_transcripts.rds')
+
+# Remove RNA_normalization from object
+Assays(object)
+object@assays$RNA_normalized = NULL
+
+# We also remove the content (UMAP and PCA) from reductions as we will generate it again with our normalization
+Reductions(object)
+object@reductions = list(NULL)
+
+gc(full=TRUE)
+# safe again our processed seurat object
+saveRDS(object, 'data/HFC_reduced.rds')
+
+################################################################################
+############################ Normalization #####################################
+################################################################################
+
+# First remove falseprobes and negativeprb from RNA file
+counts = GetAssayData(object, assay = 'RNA')
+
+# check negativeprobes
+dim(counts)
+# --> rows 6278 genes and 188686 cells
+head(row.names(counts)) # gene names
+# there rows are named negPrb (lookup in object@RNA$negprobes$data$Dimnames)
+row.names(counts) %>% grep('NegPrb', ., value=TRUE)
+# no ngeative probes are in our experiment, yeeeahhhh !
+
+# check falseprobe in the same way
+row.names(counts) %>% grep('FalseCode', ., value=TRUE)
