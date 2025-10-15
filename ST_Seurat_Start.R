@@ -6,6 +6,8 @@ renv::init()
 # Install some other packages
 install.packages("Seurat")
 install.packages("tidyverse")
+install.packages("lobstr")
+install.packages("data.table")
 #install.packages("igraph")
 #install.packages("rlang")
 #install.packages("devtools")
@@ -19,6 +21,8 @@ install.packages("tidyverse")
 
 library(Seurat)
 library(tidyverse)
+library(data.table)
+library(lobstr)
 
 
 ################################################################################
@@ -85,6 +89,29 @@ slide1_fov1_cell2 %>%
   coord_fixed() +
   theme(legend.position = "none")
 
+################################################################################
+############################ Data Preprocessing ################################
+################################################################################
 
+# The Seurat RDS file is very big and takes always a long time to load and work with. 
+# We will remove some large files in the next part, so that we can work better with it. 
 
+# How big is transcript coordinates files
+# We use lobstr for this as it does not require so much memory as the R internal object_size (this takes a while)
 
+obj_size(object@misc$transcriptCoords)
+
+# extract and safe transcript coordinates (to safe memory)
+transcripts = object@misc$transcriptCoords
+class(transcripts)
+
+fwrite(transcripts, 'data/transcript_locations.csv.gz')
+# clean environment
+rm(transcripts)
+gc(full=TRUE)
+# remove transcript info from our object (since we have it saved now)
+object@misc$transcriptCoords = list(NULL)
+gc(full=TRUE)
+
+# Safe object as Seurat file without transcripts (more managable because smaller)
+saveRDS(object, 'data/HFC_no_transcripts.rds')
