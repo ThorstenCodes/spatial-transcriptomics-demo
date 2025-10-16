@@ -1,7 +1,16 @@
 # First install renv allowing to create virtual environments in R
 install.packages("renv")
-# Initate the environment 
+# Initate new environment 
 renv::init()
+# or activate a existing one
+renv::activate()
+# Now install your packages in the renv (don't use install.packages as it installs in the home directory and not in renv (not tracked then))
+renv::install(c("Seurat", "tidyverse", "data.table", "lobstr"))
+# Installing via BiocManager worked like this:
+renv::install("BiocManager")
+BiocManager::install("glmGamPoi")
+renv::snapshot() # updates renv.lock file to inlcude the package
+
 
 # Install some other packages
 install.packages("Seurat")
@@ -15,6 +24,9 @@ install.packages("data.table")
 #BiocManager::install(c('SingleCellExperiment', 'Summarized Experiment', 'sparseMatrixStats'))
 #install.packages("lsa")
 
+install.packages('BiocManager')
+BiocManager::install('glmGamPoi')
+
 ################################################################################
 ################################# Libraries ####################################
 ################################################################################
@@ -23,6 +35,8 @@ library(Seurat)
 library(tidyverse)
 library(data.table)
 library(lobstr)
+library(BiocManager)
+library(glmGamPoi)
 
 
 ################################################################################
@@ -131,6 +145,10 @@ saveRDS(object, 'data/HFC_reduced.rds')
 ################################################################################
 ############################ Normalization #####################################
 ################################################################################
+ 
+# If necessary reload reduced object file
+object = readRDS("data/HFC_reduced.rds")
+
 
 # First remove falseprobes and negativeprb from RNA file
 counts = GetAssayData(object, assay = 'RNA')
@@ -143,5 +161,10 @@ head(row.names(counts)) # gene names
 row.names(counts) %>% grep('NegPrb', ., value=TRUE)
 # no ngeative probes are in our experiment, yeeeahhhh !
 
-# check falseprobe in the same way
+# check FalseCodes in the same way
 row.names(counts) %>% grep('FalseCode', ., value=TRUE)
+# ---> no Falsecodes inside, very good!
+
+# No we will transform with SCTransform 
+
+object = SCTransform(object, assay = 'RNA', new.assay.name = 'SCT')
