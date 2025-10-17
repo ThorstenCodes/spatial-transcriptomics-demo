@@ -108,12 +108,65 @@ slide1_fov1_cell2 %>%
 ################################################################################
 
 # The Seurat RDS file is very big and takes always a long time to load and work with. 
-# We will remove some large files in the next part, so that we can work better with it. 
+# The data set is too big to run memory-intensive SCT-Transformation on the Mac Book. Thus, we will only run a subset of cells and fovs!
+# Furthermore we will remove some large files which we then will calculate again (for demonstration).
 
-# How big is transcript coordinates files
+
+# The next line is only to show how big the S4 Seurat object is!
 # We use lobstr for this as it does not require so much memory as the R internal object_size (this takes a while)
 
 obj_size(object@misc$transcriptCoords)
+
+### Tasks ###
+# 1.) Determine how many slides there are and how many fovs are on each slide using the metadata
+
+slide_fov1 = metadata %>% 
+  filter(fov == 1,
+         slide_ID_numeric == 1)
+
+length(rownames(slide_fov1))
+
+metadata %>% filter(slide_ID_numeric == 1) %>% distinct(fov) %>%  count() #392
+
+# How many of the FOVs can we use to have 10K cells?
+fovs <- metadata %>% pull(fov) %>% unique()
+
+
+cells_per_fov <- list()  # initialize empty list
+
+for (f in fovs) {
+  subset_metadata <- metadata %>% 
+    filter(fov == f)
+  
+  # Use fov name as "key" and the cell count as "value"
+  cells_per_fov[[as.character(f)]] <- nrow(subset_metadata)
+}
+
+class(cells_per_fov)
+
+fov_counts <- unlist(cells_per_fov)
+cumsum(fov_counts)  # cumulative sum of cells
+
+# Find how many FOVs you can subtract before exceeding 10000
+which(cumsum(fov_counts) > 10000)[1] - 1
+
+# so 22 FOVs are below 10000 and 23 are above a little so we will try with 23 FOVs
+
+### Tasks ####
+# 1.) Isolate cell_ids for all cells detected in the selected Fovs. 
+# 2.) Filter the count matrix for the cell ids 
+# 3.) SCT Transform the smaller dataset on your Computer
+
+#Filter the name of all cells from the first 22 FOVs (100-122)
+cells_subset <- metadata %>% select(cell_id, fov) %>% filter(fov %in% (100:122) ) %>% pull(cell_id)
+class(cells_subset)
+
+# Subset cells from object using Seurats internal subset function (does it on all values!)
+object <- subset(object, cells = cells_subset)
+View(object_sub)
+
+
+
 
 # extract and safe transcript coordinates (to safe memory)
 transcripts = object@misc$transcriptCoords
@@ -140,31 +193,30 @@ object@reductions = list(NULL)
 
 gc(full=TRUE)
 # safe again our processed seurat object
-saveRDS(object, 'data/HFC_reduced.rds')
+saveRDS(object, 'data/HFC_reduced_subset.rds')
+
+# First remove false codes and negative probes from RNA file
+counts = GetAssayData(object, assay = 'RNA')
+
+# check negative probes
+dim(counts)
+# --> rows 6278 genes and 188686 cells
+head(row.names(counts)) # gene names
+# there rows are named negPrb (look up in object@RNA$negprobes$data$Dimnames)
+row.names(counts) %>% grep('NegPrb', ., value=TRUE)
+# RESULT: no negative probes are in our experiment!
+
+# check False Codes in the same way
+row.names(counts) %>% grep('FalseCode', ., value=TRUE)
+# ---> no False codes inside, very good!
 
 ################################################################################
 ############################ Normalization #####################################
 ################################################################################
  
-# If necessary reload reduced object file
-object = readRDS("data/HFC_reduced.rds")
 
-
-# First remove falseprobes and negativeprb from RNA file
-counts = GetAssayData(object, assay = 'RNA')
-
-# check negativeprobes
-dim(counts)
-# --> rows 6278 genes and 188686 cells
-head(row.names(counts)) # gene names
-# there rows are named negPrb (lookup in object@RNA$negprobes$data$Dimnames)
-row.names(counts) %>% grep('NegPrb', ., value=TRUE)
-# no ngeative probes are in our experiment, yeeeahhhh !
-
-# check FalseCodes in the same way
-row.names(counts) %>% grep('FalseCode', ., value=TRUE)
-# ---> no Falsecodes inside, very good!
 
 # No we will transform with SCTransform 
+object = SCTransform(object, assay = 'RNA', new.assay.name = 'SCT', )
 
-object = SCTransform(object, assay = 'RNA', new.assay.name = 'SCT')
+# 
