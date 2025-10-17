@@ -119,39 +119,43 @@ obj_size(object@misc$transcriptCoords)
 
 ### Tasks ###
 # 1.) Determine how many slides there are and how many fovs are on each slide using the metadata
+# 2.) We want to work with around 10 000 cells. How many Fovs we need to include to have enough cells. Do the fov have similar cell numbers?
+# 3.) Subset the object to the reduced cell number (see next Task section for more details)
 
-slide_fov1 = metadata %>% 
-  filter(fov == 1,
-         slide_ID_numeric == 1)
+# Solution to 1.)
 
-length(rownames(slide_fov1))
+number_of_slides <- object@meta.data %>% distinct(slide_ID_numeric) %>% count()
+number_of_slides
 
-metadata %>% filter(slide_ID_numeric == 1) %>% distinct(fov) %>%  count() #392
+# --> There is only one slide! Good let's check how many FOVs are on the slide
 
-# How many of the FOVs can we use to have 10K cells?
+metadata %>% filter(slide_ID_numeric == 1) %>% distinct(fov) %>%  count() 
+#392
+
+# 2.) How many of the FOVs can we use to have 10K cells?
 fovs <- metadata %>% pull(fov) %>% unique()
 
-
-cells_per_fov <- list()  # initialize empty list
+# initialize empty list to store results
+cells_per_fov <- list()  
 
 for (f in fovs) {
   subset_metadata <- metadata %>% 
     filter(fov == f)
-  
-  # Use fov name as "key" and the cell count as "value"
   cells_per_fov[[as.character(f)]] <- nrow(subset_metadata)
 }
 
 class(cells_per_fov)
-
 fov_counts <- unlist(cells_per_fov)
-cumsum(fov_counts)  # cumulative sum of cells
+# cumulative sum of cell
+cumsum(fov_counts)
 
 # Find how many FOVs you can subtract before exceeding 10000
+# This will generate a vector from the point where the argument is true but we want only to see the first number in this vector, thus [1]
 which(cumsum(fov_counts) > 10000)[1] - 1
 
-# so 22 FOVs are below 10000 and 23 are above a little so we will try with 23 FOVs
+# so 22 FOVs are below 10000 and 23 cross the threshold slightly.
 
+# 3.) Subsetting the data
 ### Tasks ####
 # 1.) Isolate cell_ids for all cells detected in the selected Fovs. 
 # 2.) Filter the count matrix for the cell ids 
@@ -165,9 +169,7 @@ class(cells_subset)
 object <- subset(object, cells = cells_subset)
 View(object_sub)
 
-
-
-
+# Finally I remove some data from the object as I will calculate it again and to make the object smaller.
 # extract and safe transcript coordinates (to safe memory)
 transcripts = object@misc$transcriptCoords
 class(transcripts)
@@ -189,12 +191,17 @@ object@assays$RNA_normalized = NULL
 
 # We also remove the content (UMAP and PCA) from reductions as we will generate it again with our normalization
 Reductions(object)
-object@reductions = list(NULL)
+object@reductions = list()
 
 gc(full=TRUE)
 # safe again our processed seurat object
 saveRDS(object, 'data/HFC_reduced_subset.rds')
 
+
+################################################################################
+############################ Normalization #####################################
+################################################################################
+ 
 # First remove false codes and negative probes from RNA file
 counts = GetAssayData(object, assay = 'RNA')
 
@@ -210,13 +217,8 @@ row.names(counts) %>% grep('NegPrb', ., value=TRUE)
 row.names(counts) %>% grep('FalseCode', ., value=TRUE)
 # ---> no False codes inside, very good!
 
-################################################################################
-############################ Normalization #####################################
-################################################################################
- 
 
+# Now we will transform with SCTransform 
+object <-  SCTransform(object, assay = 'RNA', new.assay.name = 'SCT', )
 
-# No we will transform with SCTransform 
-object = SCTransform(object, assay = 'RNA', new.assay.name = 'SCT', )
-
-# 
+ # 
