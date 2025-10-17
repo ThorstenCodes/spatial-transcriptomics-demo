@@ -221,4 +221,20 @@ row.names(counts) %>% grep('FalseCode', ., value=TRUE)
 # Now we will transform with SCTransform 
 object <-  SCTransform(object, assay = 'RNA', new.assay.name = 'SCT', )
 
- # 
+### Tasks ###
+# 1.) Now run the PCA
+# 2.) Illustarte how the PCA in a coordinate system
+# 3.) Run UMAP
+
+# Run PCA on subset
+object <-  RunPCA(object, assay = 'SCT', reduction.name = 'PCA', npcs = 50) # npcs 50 is default, but one could run less
+
+# Plot PCA
+DimPlot(object, reduction = 'PCA')
+
+# Run and Plot UMAP
+object <- RunUMAP(object, reduction = 'PCA', reduction.name = 'UMAP', dims = 1:30, repulsion.strength = 5)
+
+DimPlot(object, reduction = 'UMAP')
+
+
