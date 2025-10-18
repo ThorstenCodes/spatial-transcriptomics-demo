@@ -252,6 +252,7 @@ DimPlot(object, reduction = 'UMAP', group.by = 'SCT_snn_res.0.5')
 # Gene Expression of a few marker genes in the UMAP
 FeaturePlot(object, features = c("RBFOX3", "GAD1", "SLC17A7", "GFAP", "AQP4", "MBP", "OLIG1", "C1QA"))
 
-############################################################################################
+######################################################################################################
+### Tasks to continue, i downloaded images so i want to integrate it on the images like in python ####
 
 object@meta.data
