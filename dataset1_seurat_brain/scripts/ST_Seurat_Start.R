@@ -225,6 +225,7 @@ object <-  SCTransform(object, assay = 'RNA', new.assay.name = 'SCT', )
 # 1.) Now run the PCA
 # 2.) Illustarte how the PCA in a coordinate system
 # 3.) Run UMAP
+# 4.) Determine Clusters and show them in a plot
 
 # Run PCA on subset
 object <-  RunPCA(object, assay = 'SCT', reduction.name = 'PCA', npcs = 50) # npcs 50 is default, but one could run less
@@ -237,4 +238,17 @@ object <- RunUMAP(object, reduction = 'PCA', reduction.name = 'UMAP', dims = 1:3
 
 DimPlot(object, reduction = 'UMAP')
 
+
+
+# Define Clusters
+object <- FindNeighbors(object, reduction = 'PCA', dims = 1:30)
+
+object <- FindClusters(object, algorithm = 1, resolution = 0.5)
+
+# Ploting using Clusters
+colnames(object@meta.data)
+DimPlot(object, reduction = 'UMAP', group.by = 'SCT_snn_res.0.5')
+
+
+############################################################################################
 
